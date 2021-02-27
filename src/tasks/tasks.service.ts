@@ -5,6 +5,7 @@ import { TasksFilterDto } from './dto/tasks-with-filters.dto';
 import { TaskRepository } from './task.repository';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Task } from './task.entity';
+import { User } from '../auth/user.entity';
 
 @Injectable()
 export class TasksService {
@@ -13,31 +14,43 @@ export class TasksService {
     private taskRepository: TaskRepository,
   ) {}
 
-  async getTasks(filterDto: TasksFilterDto): Promise<Task[]> {
-    return await this.taskRepository.getTasks(filterDto);
+  async getTasks(
+    filterDto: TasksFilterDto,
+    user: User,
+  ): Promise<Task[]> {
+    return await this.taskRepository.getTasks(filterDto, user);
   }
 
-  async getTaskById(id: number): Promise<Task> {
-    const found = await this.taskRepository.findOne(id);
+  async getTaskById(id: number, user: User,): Promise<Task> {
+
+    const found = await this.taskRepository.findOne({ where: { id, userId: user.id }});
+
     if (!found) {
       throw new NotFoundException();
     }
     return found;
   }
 
-  async create(createTaskDto: CreateTaskDto): Promise<Task> {
-    return this.taskRepository.createTask(createTaskDto);
+  async create(
+    createTaskDto: CreateTaskDto,
+    user: User,
+  ): Promise<Task> {
+    return this.taskRepository.createTask(createTaskDto, user);
   }
 
-  async remove(id: number): Promise<void> {
-    const result = await this.taskRepository.delete(id);
+  async remove(
+    id: number,
+    user: User,
+  ): Promise<void> {
+    const result = await this.taskRepository.delete({ id, userId: user.id});
+    
     if (result.affected === 0) {
       throw new NotFoundException();
     }
   }
 
-  async update(id: number, status: TaskStatus): Promise<Task> {
-    const taskToUpdate = await this.getTaskById(id);
+  async update(id: number, status: TaskStatus, user: User): Promise<Task> {
+    const taskToUpdate = await this.getTaskById(id, user);
     taskToUpdate.status = status;
     await taskToUpdate.save();
 
